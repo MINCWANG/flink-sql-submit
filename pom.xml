@@ -9,17 +9,27 @@
     <version>1.0-SNAPSHOT</version>
 
     <properties>
-        <flink.version>1.9.0</flink.version>
+        <flink.version>1.12.2</flink.version>
+        <target.java.version>1.8</target.java.version>
+        <scala.binary.version>2.11</scala.binary.version>
     </properties>
 
     <dependencies>
         <!-- Flink modules -->
         <dependency>
             <groupId>org.apache.flink</groupId>
-            <artifactId>flink-table-api-java</artifactId>
+            <artifactId>flink-json</artifactId>
             <version>${flink.version}</version>
             <scope>provided</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-table-api-java-bridge_2.11</artifactId>
+            <version>${flink.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-table-planner-blink_2.11</artifactId>
@@ -29,14 +39,7 @@
 
         <dependency>
             <groupId>org.apache.flink</groupId>
-            <artifactId>flink-table-planner_2.11</artifactId>
-            <version>${flink.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.flink</groupId>
-            <artifactId>flink-jdbc_2.11</artifactId>
+            <artifactId>flink-connector-jdbc_2.11</artifactId>
             <version>${flink.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -49,49 +52,119 @@
             <scope>provided</scope>
         </dependency>
 
+        <dependency>
+            <groupId>com.alibaba.ververica</groupId>
+            <!-- add the dependency matching your database -->
+            <artifactId>flink-connector-mysql-cdc</artifactId>
+            <version>1.3.0</version>
+            <scope>provided</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
         <plugins>
+
+            <!-- Java Compiler -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.0</version>
+                <version>3.1</version>
                 <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
-                    <!-- The semantics of this option are reversed, see MCOMPILER-209. -->
-                    <useIncrementalCompilation>false</useIncrementalCompilation>
-                    <compilerArgs>
-                        <!-- Prevents recompilation due to missing package-info.class, see MCOMPILER-205 -->
-                        <arg>-Xpkginfo:always</arg>
-                    </compilerArgs>
+                    <source>${target.java.version}</source>
+                    <target>${target.java.version}</target>
                 </configuration>
             </plugin>
 
+            <!-- We use the maven-shade plugin to create a fat jar that contains all necessary dependencies. -->
+            <!-- Change the value of <mainClass>...</mainClass> if your program entry point changes. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
+                <version>3.1.1</version>
                 <executions>
+                    <!-- Run shade goal on package phase -->
                     <execution>
-                        <id>flink-sql-submit</id>
                         <phase>package</phase>
                         <goals>
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <finalName>flink-sql-submit</finalName>
+                            <artifactSet>
+                                <excludes>
+                                    <exclude>org.apache.flink:force-shading</exclude>
+                                    <exclude>com.google.code.findbugs:jsr305</exclude>
+                                    <exclude>org.slf4j:*</exclude>
+                                    <exclude>org.apache.logging.log4j:*</exclude>
+                                </excludes>
+                            </artifactSet>
+                            <filters>
+                                <filter>
+                                    <!-- Do not copy the signatures in the META-INF folder.
+                                    Otherwise, this might cause SecurityExceptions when using the JAR. -->
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>com.github.wuchong.sqlsubmit.SqlSubmit</mainClass>
+                                    <mainClass>org.example.StreamingJob</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
-
         </plugins>
+
+        <pluginManagement>
+            <plugins>
+
+                <!-- This improves the out-of-the-box experience in Eclipse by resolving some warnings. -->
+                <plugin>
+                    <groupId>org.eclipse.m2e</groupId>
+                    <artifactId>lifecycle-mapping</artifactId>
+                    <version>1.0.0</version>
+                    <configuration>
+                        <lifecycleMappingMetadata>
+                            <pluginExecutions>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.apache.maven.plugins</groupId>
+                                        <artifactId>maven-shade-plugin</artifactId>
+                                        <versionRange>[3.1.1,)</versionRange>
+                                        <goals>
+                                            <goal>shade</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore/>
+                                    </action>
+                                </pluginExecution>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.apache.maven.plugins</groupId>
+                                        <artifactId>maven-compiler-plugin</artifactId>
+                                        <versionRange>[3.1,)</versionRange>
+                                        <goals>
+                                            <goal>testCompile</goal>
+                                            <goal>compile</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore/>
+                                    </action>
+                                </pluginExecution>
+                            </pluginExecutions>
+                        </lifecycleMappingMetadata>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
 
 </project>

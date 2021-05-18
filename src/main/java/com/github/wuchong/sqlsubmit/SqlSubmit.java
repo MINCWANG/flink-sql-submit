@@ -24,6 +24,7 @@ import com.github.wuchong.sqlsubmit.cli.SqlCommandParser;
 import com.github.wuchong.sqlsubmit.cli.SqlCommandParser.SqlCommandCall;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.SqlParserException;
+import org.apache.flink.table.api.StatementSet;
 import org.apache.flink.table.api.TableEnvironment;
 
 import java.nio.file.Files;
@@ -43,6 +44,7 @@ public class SqlSubmit {
     private String sqlFilePath;
     private String workSpace;
     private TableEnvironment tEnv;
+    private StatementSet statementSet;
 
     private SqlSubmit(CliOptions options) {
         this.sqlFilePath = options.getSqlFilePath();
@@ -55,12 +57,13 @@ public class SqlSubmit {
                 .inStreamingMode()
                 .build();
         this.tEnv = TableEnvironment.create(settings);
+        statementSet = tEnv.createStatementSet();
         List<String> sql = Files.readAllLines(Paths.get(workSpace + "/" + sqlFilePath));
         List<SqlCommandCall> calls = SqlCommandParser.parse(sql);
         for (SqlCommandCall call : calls) {
             callCommand(call);
         }
-        tEnv.execute("SQL Job");
+        statementSet.execute();
     }
 
     // --------------------------------------------------------------------------------------------
@@ -90,7 +93,7 @@ public class SqlSubmit {
     private void callCreateTable(SqlCommandCall cmdCall) {
         String ddl = cmdCall.operands[0];
         try {
-            tEnv.sqlUpdate(ddl);
+            tEnv.executeSql(ddl);
         } catch (SqlParserException e) {
             throw new RuntimeException("SQL parse failed:\n" + ddl + "\n", e);
         }
@@ -99,7 +102,7 @@ public class SqlSubmit {
     private void callInsertInto(SqlCommandCall cmdCall) {
         String dml = cmdCall.operands[0];
         try {
-            tEnv.sqlUpdate(dml);
+            statementSet.addInsertSql(dml);
         } catch (SqlParserException e) {
             throw new RuntimeException("SQL parse failed:\n" + dml + "\n", e);
         }
