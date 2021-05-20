@@ -103,6 +103,12 @@ public final class SqlCommandParser {
 		CREATE_TABLE(
 			"(CREATE\\s+TABLE.*)",
 				SINGLE_OPERAND),
+		CREATE_CATALOG(
+				"(CREATE\\s+CATALOG.*)",
+				SINGLE_OPERAND),
+		DROP_TABLE(
+				"(DROP\\s+TABLE.*)",
+				SINGLE_OPERAND),
 
 		SET(
 			"SET(\\s+(\\S+)\\s*=(.*))?", // whitespace is only ignored on the left side of '='

@@ -21,11 +21,11 @@ package com.github.wuchong.sqlsubmit;
 import com.github.wuchong.sqlsubmit.cli.CliOptions;
 import com.github.wuchong.sqlsubmit.cli.CliOptionsParser;
 import com.github.wuchong.sqlsubmit.cli.SqlCommandParser;
-import com.github.wuchong.sqlsubmit.cli.SqlCommandParser.SqlCommandCall;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.SqlParserException;
 import org.apache.flink.table.api.StatementSet;
-import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -43,7 +43,7 @@ public class SqlSubmit {
 
     private String sqlFilePath;
     private String workSpace;
-    private TableEnvironment tEnv;
+    private StreamTableEnvironment tEnv;
     private StatementSet statementSet;
 
     private SqlSubmit(CliOptions options) {
@@ -52,28 +52,30 @@ public class SqlSubmit {
     }
 
     private void run() throws Exception {
-        EnvironmentSettings settings = EnvironmentSettings.newInstance()
-                .useBlinkPlanner()
-                .inStreamingMode()
-                .build();
-        this.tEnv = TableEnvironment.create(settings);
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        EnvironmentSettings bsSettings = EnvironmentSettings.newInstance().useBlinkPlanner().inStreamingMode().build();
+        tEnv = StreamTableEnvironment.create(env, bsSettings);
         statementSet = tEnv.createStatementSet();
         List<String> sql = Files.readAllLines(Paths.get(workSpace + "/" + sqlFilePath));
-        List<SqlCommandCall> calls = SqlCommandParser.parse(sql);
-        for (SqlCommandCall call : calls) {
+        List<SqlCommandParser.SqlCommandCall> calls = SqlCommandParser.parse(sql);
+        for (SqlCommandParser.SqlCommandCall call : calls) {
             callCommand(call);
         }
         statementSet.execute();
     }
 
     // --------------------------------------------------------------------------------------------
-
-    private void callCommand(SqlCommandCall cmdCall) {
+    // TODO
+    // DROP
+    // CREATE_CATALOG
+    private void callCommand(SqlCommandParser.SqlCommandCall cmdCall) {
         switch (cmdCall.command) {
             case SET:
                 callSet(cmdCall);
                 break;
             case CREATE_TABLE:
+            case DROP_TABLE:
+            case CREATE_CATALOG:
                 callCreateTable(cmdCall);
                 break;
             case INSERT_INTO:
@@ -84,13 +86,13 @@ public class SqlSubmit {
         }
     }
 
-    private void callSet(SqlCommandCall cmdCall) {
+    private void callSet(SqlCommandParser.SqlCommandCall cmdCall) {
         String key = cmdCall.operands[0];
         String value = cmdCall.operands[1];
         tEnv.getConfig().getConfiguration().setString(key, value);
     }
 
-    private void callCreateTable(SqlCommandCall cmdCall) {
+    private void callCreateTable(SqlCommandParser.SqlCommandCall cmdCall) {
         String ddl = cmdCall.operands[0];
         try {
             tEnv.executeSql(ddl);
@@ -99,10 +101,11 @@ public class SqlSubmit {
         }
     }
 
-    private void callInsertInto(SqlCommandCall cmdCall) {
+    private void callInsertInto(SqlCommandParser.SqlCommandCall cmdCall) {
         String dml = cmdCall.operands[0];
         try {
             statementSet.addInsertSql(dml);
+            // tEnv.executeSql(dml);
         } catch (SqlParserException e) {
             throw new RuntimeException("SQL parse failed:\n" + dml + "\n", e);
         }

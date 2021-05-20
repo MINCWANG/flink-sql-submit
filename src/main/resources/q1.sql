@@ -10,47 +10,75 @@
 -- -- 开启 distinct agg 切分
 -- SET table.optimizer.distinct-agg.split.enabled=true;
 
+SET table.dynamic-table-options.enabled= true;
+SET pipeline.name = iceberg_sync;
 
--- source
-CREATE TABLE user_log (
-    user_id VARCHAR,
-    item_id VARCHAR,
-    category_id VARCHAR,
-    behavior VARCHAR,
-    ts TIMESTAMP
-) WITH (
-    'connector.type' = 'kafka',
-    'connector.version' = 'universal',
-    'connector.topic' = 'user_behavior',
-    'connector.startup-mode' = 'earliest-offset',
-    'connector.properties.0.key' = 'zookeeper.connect',
-    'connector.properties.0.value' = 'localhost:2181',
-    'connector.properties.1.key' = 'bootstrap.servers',
-    'connector.properties.1.value' = 'localhost:9092',
-    'update-mode' = 'append',
-    'format.type' = 'json',
-    'format.derive-schema' = 'true'
-);
-
--- sink
-CREATE TABLE pvuv_sink (
-    dt VARCHAR,
-    pv BIGINT,
-    uv BIGINT
-) WITH (
-    'connector.type' = 'jdbc',
-    'connector.url' = 'jdbc:mysql://localhost:3306/flink-test',
-    'connector.table' = 'pvuv_sink',
-    'connector.username' = 'root',
-    'connector.password' = '123456',
-    'connector.write.flush.max-rows' = '1'
+CREATE CATALOG hive_catalog WITH (
+   'type'='iceberg',
+   'catalog-type'='hive',
+   'uri'='thrift://10.49.1.60:7004',
+   'clients'='5',
+   'property-version'='1',
+   'warehouse'='hdfs:///usr/hive/warehouse'
 );
 
 
-INSERT INTO pvuv_sink
-SELECT
-  DATE_FORMAT(ts, 'yyyy-MM-dd HH:00') dt,
-  COUNT(*) AS pv,
-  COUNT(DISTINCT user_id) AS uv
-FROM user_log
-GROUP BY DATE_FORMAT(ts, 'yyyy-MM-dd HH:00');
+CREATE TABLE IF NOT EXISTS default_catalog.default_database.`ods_finance_shipment_item_event_mws`
+(
+    `id`                                      BIGINT,
+    `zid`                                     INT,
+    `sid`                                     INT,
+    `marketplace_id`                          STRING,
+    `event_type`                              INT,
+    `posted_date`                             STRING,
+    `posted_datetime_locale`                  STRING,
+    `posted_date_locale`                      STRING,
+    `amazon_order_id`                         STRING,
+    `seller_order_id`                         STRING,
+    `shipment_event_id`                       INT,
+    `seller_sku`                              STRING,
+    `order_item_id`                           STRING,
+    `order_adjustment_item_id`                STRING,
+    `quantity_shipped`                        INT,
+    `cost_of_points_granted_currency_code`    STRING,
+    `cost_of_points_granted_currency_amount`  DECIMAL(10, 2),
+    `cost_of_points_returned_currency_code`   STRING,
+    `cost_of_points_returned_currency_amount` DECIMAL(10, 2),
+    `gmt_modified`                            TIMESTAMP(3),
+    `gmt_create`                              TIMESTAMP(3),
+    `env_mark`                                STRING,
+    PRIMARY KEY (`env_mark`, `id`) NOT ENFORCED
+) with (
+      'connector' = 'kafka',
+      'topic' = 'ods_finance_shipment_item_event_mws',
+      'properties.bootstrap.servers' = '10.50.17.51:9092',
+      'properties.group.id' = 'iceberg-oom',
+      'scan.startup.mode' = 'earliest-offset',
+      'debezium-json.ignore-parse-errors' = 'true',
+      'format' = 'debezium-json'
+      );
+
+DROP TABLE IF EXISTS hive_catalog.iceberg_db.`ods_finance_shipment_item_event_mws`;
+
+CREATE TABLE IF NOT EXISTS hive_catalog.iceberg_db.`ods_finance_shipment_item_event_mws_oom`(
+    `year`                                    STRING,
+    `month`                                   STRING,
+    `day`                                     STRING
+)
+PARTITIONED BY  (`year`,`month`,`day`)
+with ('engine.hive.enabled'='true')
+LIKE default_catalog.default_database.`ods_finance_shipment_item_event_mws`(
+    EXCLUDING ALL
+    INCLUDING CONSTRAINTS
+);
+
+
+
+
+
+INSERT INTO hive_catalog.iceberg_db.`ods_finance_shipment_item_event_mws_oom`
+SELECT *,
+       CAST(YEAR(gmt_create) AS STRING) AS `year`,
+       CAST(MONTH(gmt_create)  AS STRING) AS `month`,
+       CAST(DAYOFMONTH(gmt_create) AS STRING) AS `day`
+FROM default_catalog.default_database.`ods_finance_shipment_item_event_mws`;
