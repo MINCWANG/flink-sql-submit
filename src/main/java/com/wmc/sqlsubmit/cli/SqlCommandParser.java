@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.github.wuchong.sqlsubmit.cli;
+package com.wmc.sqlsubmit.cli;
 
 import java.util.ArrayList;
 import java.util.Arrays;

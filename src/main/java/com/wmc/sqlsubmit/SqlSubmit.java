@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-package com.github.wuchong.sqlsubmit;
+package com.wmc.sqlsubmit;
 
-import com.github.wuchong.sqlsubmit.cli.CliOptions;
-import com.github.wuchong.sqlsubmit.cli.CliOptionsParser;
-import com.github.wuchong.sqlsubmit.cli.SqlCommandParser;
+import com.wmc.sqlsubmit.cli.CliOptions;
+import com.wmc.sqlsubmit.cli.CliOptionsParser;
+import com.wmc.sqlsubmit.cli.SqlCommandParser;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.SqlParserException;
@@ -42,21 +42,22 @@ public class SqlSubmit {
     // --------------------------------------------------------------------------------------------
 
     private String sqlFilePath;
-    private String workSpace;
+    // private String workSpace;
     private StreamTableEnvironment tEnv;
     private StatementSet statementSet;
+    private StreamExecutionEnvironment env;
 
     private SqlSubmit(CliOptions options) {
         this.sqlFilePath = options.getSqlFilePath();
-        this.workSpace = options.getWorkingSpace();
+        // this.workSpace = options.getWorkingSpace();
     }
 
     private void run() throws Exception {
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env = StreamExecutionEnvironment.getExecutionEnvironment();
         EnvironmentSettings bsSettings = EnvironmentSettings.newInstance().useBlinkPlanner().inStreamingMode().build();
         tEnv = StreamTableEnvironment.create(env, bsSettings);
         statementSet = tEnv.createStatementSet();
-        List<String> sql = Files.readAllLines(Paths.get(workSpace + "/" + sqlFilePath));
+        List<String> sql = Files.readAllLines(Paths.get(sqlFilePath));
         List<SqlCommandParser.SqlCommandCall> calls = SqlCommandParser.parse(sql);
         for (SqlCommandParser.SqlCommandCall call : calls) {
             callCommand(call);
@@ -89,7 +90,14 @@ public class SqlSubmit {
     private void callSet(SqlCommandParser.SqlCommandCall cmdCall) {
         String key = cmdCall.operands[0];
         String value = cmdCall.operands[1];
-        tEnv.getConfig().getConfiguration().setString(key, value);
+        if ("execution.checkpointing.interval".equals(key)){
+            env.enableCheckpointing(Long.parseLong(value));
+        }
+        else if ("execution.checkpointing.min-pause".equals(key)){
+            env.getCheckpointConfig().setMinPauseBetweenCheckpoints(Long.parseLong(value));
+        }else {
+            tEnv.getConfig().getConfiguration().setString(key, value);
+        }
     }
 
     private void callCreateTable(SqlCommandParser.SqlCommandCall cmdCall) {

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.github.wuchong.sqlsubmit;
+package com.wmc.sqlsubmit;
 
 import java.io.BufferedReader;
 import java.io.IOException;

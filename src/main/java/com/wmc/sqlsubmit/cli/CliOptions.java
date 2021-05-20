@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.github.wuchong.sqlsubmit.cli;
+package com.wmc.sqlsubmit.cli;
 
 /**
  * Command line options to configure the SQL client. Arguments that have not been specified
@@ -25,18 +25,22 @@ package com.github.wuchong.sqlsubmit.cli;
 public class CliOptions {
 
     private final String sqlFilePath;
-    private final String workingSpace;
+    // private final String workingSpace;
 
-    public CliOptions(String sqlFilePath, String workingSpace) {
+    // public CliOptions(String sqlFilePath, String workingSpace) {
+    //     this.sqlFilePath = sqlFilePath;
+    //     this.workingSpace = workingSpace;
+    // }
+
+    public CliOptions(String sqlFilePath) {
         this.sqlFilePath = sqlFilePath;
-        this.workingSpace = workingSpace;
     }
 
     public String getSqlFilePath() {
         return sqlFilePath;
     }
 
-    public String getWorkingSpace() {
-        return workingSpace;
-    }
+    // public String getWorkingSpace() {
+    //     return workingSpace;
+    // }
 }

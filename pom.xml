@@ -247,7 +247,7 @@
                             </filters>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>com.github.wuchong.sqlsubmit.SqlSubmit</mainClass>
+                                    <mainClass>com.wmc.sqlsubmit.SqlSubmit</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>
