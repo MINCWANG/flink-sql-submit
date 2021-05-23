@@ -90,13 +90,14 @@ public class SqlSubmit {
     private void callSet(SqlCommandParser.SqlCommandCall cmdCall) {
         String key = cmdCall.operands[0];
         String value = cmdCall.operands[1];
-        if ("execution.checkpointing.interval".equals(key)){
-            env.enableCheckpointing(Long.parseLong(value));
-        }
-        else if ("execution.checkpointing.min-pause".equals(key)){
-            env.getCheckpointConfig().setMinPauseBetweenCheckpoints(Long.parseLong(value));
-        }else {
-            tEnv.getConfig().getConfiguration().setString(key, value);
+        switch (key) {
+            // TODO trim
+            case "parallelism.default":  env.setParallelism(Integer.parseInt(value.trim())); break;
+            case "execution.checkpointing.interval": env.enableCheckpointing(Long.parseLong(value.trim())); break;
+            case "execution.checkpointing.min-pause": env.getCheckpointConfig().setMinPauseBetweenCheckpoints(Long.parseLong(value.trim())); break;
+            case "execution.checkpointing.tolerable-failed-checkpoints":  env.getCheckpointConfig().setTolerableCheckpointFailureNumber(Integer.parseInt(value.trim())); break;
+            case "execution.checkpointing.unaligned":  env.getCheckpointConfig().enableUnalignedCheckpoints(Boolean.parseBoolean(value.trim())); break;
+            default:  tEnv.getConfig().getConfiguration().setString(key, value.trim());
         }
     }
 

@@ -12,6 +12,10 @@
 
 SET table.dynamic-table-options.enabled= true;
 SET pipeline.name = iceberg_sync;
+SET parallelism.default = 10;
+SET execution.checkpointing.interval=30000;
+SET execution.checkpointing.min-pause=30000;
+SET execution.checkpointing.unaligned = true;
 
 CREATE CATALOG hive_catalog WITH (
    'type'='iceberg',
@@ -52,13 +56,13 @@ CREATE TABLE IF NOT EXISTS default_catalog.default_database.`ods_finance_shipmen
       'connector' = 'kafka',
       'topic' = 'ods_finance_shipment_item_event_mws',
       'properties.bootstrap.servers' = '10.50.17.51:9092',
-      'properties.group.id' = 'iceberg-oom',
+      'properties.group.id' = 'iceberg-005',
       'scan.startup.mode' = 'earliest-offset',
       'debezium-json.ignore-parse-errors' = 'true',
       'format' = 'debezium-json'
       );
 
-DROP TABLE IF EXISTS hive_catalog.iceberg_db.`ods_finance_shipment_item_event_mws`;
+-- DROP TABLE IF EXISTS hive_catalog.iceberg_db.`ods_finance_shipment_item_event_mws`;
 
 CREATE TABLE IF NOT EXISTS hive_catalog.iceberg_db.`ods_finance_shipment_item_event_mws_oom`(
     `year`                                    STRING,
