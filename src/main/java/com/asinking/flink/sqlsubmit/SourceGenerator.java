@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.wmc.sqlsubmit;
+package com.asinking.flink.sqlsubmit;
 
 import java.io.BufferedReader;
 import java.io.IOException;

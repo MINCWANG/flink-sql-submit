@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-package com.wmc.sqlsubmit;
+package com.asinking.flink.sqlsubmit;
 
-import com.wmc.sqlsubmit.cli.CliOptions;
-import com.wmc.sqlsubmit.cli.CliOptionsParser;
-import com.wmc.sqlsubmit.cli.SqlCommandParser;
+import com.asinking.flink.sqlsubmit.cli.CliOptions;
+import com.asinking.flink.sqlsubmit.cli.CliOptionsParser;
+import com.asinking.flink.sqlsubmit.cli.SqlCommandParser;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.SqlParserException;

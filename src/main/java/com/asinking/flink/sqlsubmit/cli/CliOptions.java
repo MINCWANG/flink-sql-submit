@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.wmc.sqlsubmit.cli;
+package com.asinking.flink.sqlsubmit.cli;
 
 /**
  * Command line options to configure the SQL client. Arguments that have not been specified

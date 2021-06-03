@@ -18,7 +18,10 @@
 ################################################################################
 
 # source "$(dirname "$0")"/env.sh
-
 PROJECT_DIR=`pwd`
 #$FLINK_DIR/bin/
-flink run -d -p 10 target/flink-sql-submit.jar -w "${dirname}"/src/main/resources/ -f "$1".sql
+flink run \
+-d -t yarn-per-job  \
+-Dyarn.application.name="$2" \
+-Denv.java.opts="-server -XX:+UseG1GC -XX:MaxGCPauseMillis=500 -XX:NativeMemoryTracking=summary -XX:+PreserveFramePointer -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/data/emr/flink/logs/"$2"-flink-oom-dump.hprof  -Xloggc:/data/emr/flink/logs/"$2"-flink-gc.log -XX:+PrintGCApplicationStoppedTime -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=10 -XX:GCLogFileSize=10M -XX:+PrintPromotionFailure -XX:+PrintGCCause" \
+flink-sql-submit-1.0-SNAPSHOT.jar  -f "$1"

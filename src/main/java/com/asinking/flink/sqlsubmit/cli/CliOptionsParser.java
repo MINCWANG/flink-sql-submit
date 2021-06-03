@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.wmc.sqlsubmit.cli;
+package com.asinking.flink.sqlsubmit.cli;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.DefaultParser;
