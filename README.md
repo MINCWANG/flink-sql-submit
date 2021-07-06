@@ -16,9 +16,3 @@ Starting execution of program
 Job has been submitted with JobID d01b04d7c8f8a90798d6400462718743
 ```
 
-## Others
-
-You can follow my WeChat Subscription Account for more information about this project.
-
-<img src="https://img.alicdn.com/tfs/TB1.ajIlIbpK1RjSZFyXXX_qFXa-1004-541.png" width="500px" />
-
