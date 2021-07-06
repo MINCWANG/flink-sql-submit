@@ -134,20 +134,16 @@ public class SqlSubmit {
         String dml = parseVariable(cmdCall.operands[0]);
         try {
             statementSet.addInsertSql(dml);
-            // tEnv.executeSql(dml);
         } catch (SqlParserException e) {
             throw new RuntimeException("SQL parse failed:\n" + dml + "\n", e);
         }
     }
 
     private String parseVariable(String s) {
-        Map<String, String> map = env.getConfig()
-                .getGlobalJobParameters()
-                .toMap();
+        Map<String, String> map = env.getConfig().getGlobalJobParameters().toMap();
         for (Map.Entry<String, String> entry : map.entrySet()) {
-            s.replaceAll("\\$" + entry.getKey(), entry.getValue().trim());
+            s = s.replaceAll("\\$" + entry.getKey(), entry.getValue().trim());
         }
-
         return s;
     }
 }
