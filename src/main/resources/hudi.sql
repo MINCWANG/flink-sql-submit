@@ -16,6 +16,8 @@ SET pipeline.name = hudi_sync1;
 SET execution.checkpointing.interval=60000;
 SET execution.checkpointing.min-pause=60000;
 
+EXPORT topic=test;
+
 
 CREATE TABLE IF NOT EXISTS default_catalog.default_database.`ods_finance_shipment_item_event_mws`
 (
@@ -44,7 +46,7 @@ CREATE TABLE IF NOT EXISTS default_catalog.default_database.`ods_finance_shipmen
     PRIMARY KEY (`env_mark`, `id`) NOT ENFORCED
 ) with (
       'connector' = 'kafka',
-      'topic' = 'ods_finance_shipment_item_event_mws',
+      'topic' = '$topic',
       'properties.bootstrap.servers' = '10.50.17.51:9092',
       'properties.group.id' = 'hudi-oom1',
       'scan.startup.mode' = 'earliest-offset',

@@ -21,6 +21,7 @@ package com.asinking.flink.sqlsubmit;
 import com.asinking.flink.sqlsubmit.cli.CliOptions;
 import com.asinking.flink.sqlsubmit.cli.CliOptionsParser;
 import com.asinking.flink.sqlsubmit.cli.SqlCommandParser;
+import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.SqlParserException;
@@ -29,19 +30,15 @@ import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class SqlSubmit {
 
-    public static void main(String[] args) throws Exception {
-        final CliOptions options = CliOptionsParser.parseClient(args);
-        SqlSubmit submit = new SqlSubmit(options);
-        submit.run();
-    }
+    private final String sqlFilePath;
 
     // --------------------------------------------------------------------------------------------
-
-    private String sqlFilePath;
     // private String workSpace;
     private StreamTableEnvironment tEnv;
     private StatementSet statementSet;
@@ -50,6 +47,12 @@ public class SqlSubmit {
     private SqlSubmit(CliOptions options) {
         this.sqlFilePath = options.getSqlFilePath();
         // this.workSpace = options.getWorkingSpace();
+    }
+
+    public static void main(String[] args) throws Exception {
+        final CliOptions options = CliOptionsParser.parseClient(args);
+        SqlSubmit submit = new SqlSubmit(options);
+        submit.run();
     }
 
     private void run() throws Exception {
@@ -66,13 +69,14 @@ public class SqlSubmit {
     }
 
     // --------------------------------------------------------------------------------------------
-    // TODO
-    // DROP
-    // CREATE_CATALOG
+
     private void callCommand(SqlCommandParser.SqlCommandCall cmdCall) {
         switch (cmdCall.command) {
             case SET:
                 callSet(cmdCall);
+                break;
+            case EXPORT:
+                callExport(cmdCall);
                 break;
             case CREATE_TABLE:
             case DROP_TABLE:
@@ -91,18 +95,34 @@ public class SqlSubmit {
         String key = cmdCall.operands[0];
         String value = cmdCall.operands[1];
         switch (key) {
-            // TODO trim
-            case "parallelism.default":  env.setParallelism(Integer.parseInt(value.trim())); break;
-            case "execution.checkpointing.interval": env.enableCheckpointing(Long.parseLong(value.trim())); break;
-            case "execution.checkpointing.min-pause": env.getCheckpointConfig().setMinPauseBetweenCheckpoints(Long.parseLong(value.trim())); break;
-            case "execution.checkpointing.tolerable-failed-checkpoints":  env.getCheckpointConfig().setTolerableCheckpointFailureNumber(Integer.parseInt(value.trim())); break;
-            case "execution.checkpointing.unaligned":  env.getCheckpointConfig().enableUnalignedCheckpoints(Boolean.parseBoolean(value.trim())); break;
-            default:  tEnv.getConfig().getConfiguration().setString(key, value.trim());
+            case "execution.checkpointing.interval":
+                env.enableCheckpointing(Long.parseLong(value.trim()));
+                break;
+            case "execution.checkpointing.min-pause":
+                env.getCheckpointConfig().setMinPauseBetweenCheckpoints(Long.parseLong(value.trim()));
+                break;
+            case "execution.checkpointing.tolerable-failed-checkpoints":
+                env.getCheckpointConfig().setTolerableCheckpointFailureNumber(Integer.parseInt(value.trim()));
+                break;
+            case "execution.checkpointing.unaligned":
+                env.getCheckpointConfig().enableUnalignedCheckpoints(Boolean.parseBoolean(value.trim()));
+                break;
+            default:
+                tEnv.getConfig().getConfiguration().setString(key, value.trim());
         }
     }
 
+    private void callExport(SqlCommandParser.SqlCommandCall cmdCall) {
+        String key = cmdCall.operands[0];
+        String value = cmdCall.operands[1];
+        HashMap<String, String> map = new HashMap<>(1);
+        map.put(key, value);
+        env.getConfig().setGlobalJobParameters(ParameterTool.fromMap(map));
+    }
+
     private void callCreateTable(SqlCommandParser.SqlCommandCall cmdCall) {
-        String ddl = cmdCall.operands[0];
+        String ddl = parseVariable(cmdCall.operands[0]);
+
         try {
             tEnv.executeSql(ddl);
         } catch (SqlParserException e) {
@@ -111,12 +131,23 @@ public class SqlSubmit {
     }
 
     private void callInsertInto(SqlCommandParser.SqlCommandCall cmdCall) {
-        String dml = cmdCall.operands[0];
+        String dml = parseVariable(cmdCall.operands[0]);
         try {
             statementSet.addInsertSql(dml);
             // tEnv.executeSql(dml);
         } catch (SqlParserException e) {
             throw new RuntimeException("SQL parse failed:\n" + dml + "\n", e);
         }
+    }
+
+    private String parseVariable(String s) {
+        Map<String, String> map = env.getConfig()
+                .getGlobalJobParameters()
+                .toMap();
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            s.replaceAll("\\$" + entry.getKey(), entry.getValue().trim());
+        }
+
+        return s;
     }
 }
